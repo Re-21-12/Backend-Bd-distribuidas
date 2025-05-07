@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class plazaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public plazaController(AppDbContext context)
+        public plazaController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/plaza
         [HttpGet]
         public async Task<ActionResult<IEnumerable<plaza>>> Getplazas()
         {
-            return await _context.plazas.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.plazas.ToListAsync();
         }
 
         // GET: api/plaza/5
         [HttpGet("{id}")]
         public async Task<ActionResult<plaza>> Getplaza(string id)
         {
-            var plaza = await _context.plazas.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var plaza = await context.plazas.FindAsync(id);
 
             if (plaza == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/plaza/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putplaza(string id, plaza plaza)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(plaza).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(plaza).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!plazaExists(id))
+                if (!context.plazas.Any(e => e.letra_fila == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/plaza
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<plaza>> Postplaza(plaza plaza)
         {
-            _context.plazas.Add(plaza);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.plazas.Add(plaza);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (plazaExists(plaza.letra_fila))
+                if (context.plazas.Any(e => e.letra_fila == plaza.letra_fila))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deleteplaza(string id)
         {
-            var plaza = await _context.plazas.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var plaza = await context.plazas.FindAsync(id);
             if (plaza == null)
             {
                 return NotFound();
             }
 
-            _context.plazas.Remove(plaza);
-            await _context.SaveChangesAsync();
+            context.plazas.Remove(plaza);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool plazaExists(string id)
-        {
-            return _context.plazas.Any(e => e.letra_fila == id);
         }
     }
 }

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class paiController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public paiController(AppDbContext context)
+        public paiController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/pai
         [HttpGet]
         public async Task<ActionResult<IEnumerable<pai>>> Getpais()
         {
-            return await _context.pais.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.pais.ToListAsync();
         }
 
         // GET: api/pai/5
         [HttpGet("{id}")]
         public async Task<ActionResult<pai>> Getpai(string id)
         {
-            var pai = await _context.pais.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var pai = await context.pais.FindAsync(id);
 
             if (pai == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/pai/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putpai(string id, pai pai)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(pai).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(pai).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!paiExists(id))
+                if (!context.pais.Any(e => e.codigo_pais == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/pai
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<pai>> Postpai(pai pai)
         {
-            _context.pais.Add(pai);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.pais.Add(pai);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (paiExists(pai.codigo_pais))
+                if (context.pais.Any(e => e.codigo_pais == pai.codigo_pais))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletepai(string id)
         {
-            var pai = await _context.pais.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var pai = await context.pais.FindAsync(id);
             if (pai == null)
             {
                 return NotFound();
             }
 
-            _context.pais.Remove(pai);
-            await _context.SaveChangesAsync();
+            context.pais.Remove(pai);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool paiExists(string id)
-        {
-            return _context.pais.Any(e => e.codigo_pais == id);
         }
     }
 }

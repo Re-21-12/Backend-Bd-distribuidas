@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class telefonoController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public telefonoController(AppDbContext context)
+        public telefonoController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/telefono
         [HttpGet]
         public async Task<ActionResult<IEnumerable<telefono>>> Gettelefonos()
         {
-            return await _context.telefonos.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.telefonos.ToListAsync();
         }
 
         // GET: api/telefono/5
         [HttpGet("{id}")]
         public async Task<ActionResult<telefono>> Gettelefono(string id)
         {
-            var telefono = await _context.telefonos.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var telefono = await context.telefonos.FindAsync(id);
 
             if (telefono == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/telefono/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Puttelefono(string id, telefono telefono)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(telefono).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(telefono).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!telefonoExists(id))
+                if (!context.telefonos.Any(e => e.numero_telefono == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,18 @@ namespace api_db.Controllers
         }
 
         // POST: api/telefono
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<telefono>> Posttelefono(telefono telefono)
         {
-            _context.telefonos.Add(telefono);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.telefonos.Add(telefono);
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (telefonoExists(telefono.numero_telefono))
+                if (context.telefonos.Any(e => e.numero_telefono == telefono.numero_telefono))
                 {
                     return Conflict();
                 }
@@ -102,21 +103,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletetelefono(string id)
         {
-            var telefono = await _context.telefonos.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var telefono = await context.telefonos.FindAsync(id);
             if (telefono == null)
             {
                 return NotFound();
             }
 
-            _context.telefonos.Remove(telefono);
-            await _context.SaveChangesAsync();
+            context.telefonos.Remove(telefono);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool telefonoExists(string id)
-        {
-            return _context.telefonos.Any(e => e.numero_telefono == id);
         }
     }
 }

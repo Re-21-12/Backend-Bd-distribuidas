@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class correo_electronicoController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public correo_electronicoController(AppDbContext context)
+        public correo_electronicoController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/correo_electronico
         [HttpGet]
         public async Task<ActionResult<IEnumerable<correo_electronico>>> Getcorreo_electronicos()
         {
-            return await _context.correo_electronicos.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.correo_electronicos.ToListAsync();
         }
 
         // GET: api/correo_electronico/5
         [HttpGet("{id}")]
         public async Task<ActionResult<correo_electronico>> Getcorreo_electronico(string id)
         {
-            var correo_electronico = await _context.correo_electronicos.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var correo_electronico = await context.correo_electronicos.FindAsync(id);
 
             if (correo_electronico == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/correo_electronico/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putcorreo_electronico(string id, correo_electronico correo_electronico)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(correo_electronico).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(correo_electronico).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!correo_electronicoExists(id))
+                if (!context.correo_electronicos.Any(e => e.correo == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/correo_electronico
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<correo_electronico>> Postcorreo_electronico(correo_electronico correo_electronico)
         {
-            _context.correo_electronicos.Add(correo_electronico);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.correo_electronicos.Add(correo_electronico);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (correo_electronicoExists(correo_electronico.correo))
+                if (context.correo_electronicos.Any(e => e.correo == correo_electronico.correo))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletecorreo_electronico(string id)
         {
-            var correo_electronico = await _context.correo_electronicos.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var correo_electronico = await context.correo_electronicos.FindAsync(id);
             if (correo_electronico == null)
             {
                 return NotFound();
             }
 
-            _context.correo_electronicos.Remove(correo_electronico);
-            await _context.SaveChangesAsync();
+            context.correo_electronicos.Remove(correo_electronico);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool correo_electronicoExists(string id)
-        {
-            return _context.correo_electronicos.Any(e => e.correo == id);
         }
     }
 }

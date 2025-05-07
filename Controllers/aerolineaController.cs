@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class aerolineaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public aerolineaController(AppDbContext context)
+        public aerolineaController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/aerolinea
         [HttpGet]
         public async Task<ActionResult<IEnumerable<aerolinea>>> Getaerolineas()
         {
-            return await _context.aerolineas.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.aerolineas.ToListAsync();
         }
 
         // GET: api/aerolinea/5
         [HttpGet("{id}")]
         public async Task<ActionResult<aerolinea>> Getaerolinea(string id)
         {
-            var aerolinea = await _context.aerolineas.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var aerolinea = await context.aerolineas.FindAsync(id);
 
             if (aerolinea == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/aerolinea/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putaerolinea(string id, aerolinea aerolinea)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(aerolinea).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(aerolinea).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!aerolineaExists(id))
+                if (!context.aerolineas.Any(e => e.id_aerolinea == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/aerolinea
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<aerolinea>> Postaerolinea(aerolinea aerolinea)
         {
-            _context.aerolineas.Add(aerolinea);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.aerolineas.Add(aerolinea);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (aerolineaExists(aerolinea.id_aerolinea))
+                if (context.aerolineas.Any(e => e.id_aerolinea == aerolinea.id_aerolinea))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deleteaerolinea(string id)
         {
-            var aerolinea = await _context.aerolineas.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var aerolinea = await context.aerolineas.FindAsync(id);
             if (aerolinea == null)
             {
                 return NotFound();
             }
 
-            _context.aerolineas.Remove(aerolinea);
-            await _context.SaveChangesAsync();
+            context.aerolineas.Remove(aerolinea);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool aerolineaExists(string id)
-        {
-            return _context.aerolineas.Any(e => e.id_aerolinea == id);
         }
     }
 }

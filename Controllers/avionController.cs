@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class avionController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public avionController(AppDbContext context)
+        public avionController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/avion
         [HttpGet]
         public async Task<ActionResult<IEnumerable<avion>>> Getavions()
         {
-            return await _context.avions.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.avions.ToListAsync();
         }
 
         // GET: api/avion/5
         [HttpGet("{id}")]
         public async Task<ActionResult<avion>> Getavion(int id)
         {
-            var avion = await _context.avions.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var avion = await context.avions.FindAsync(id);
 
             if (avion == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/avion/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putavion(int id, avion avion)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(avion).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(avion).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!avionExists(id))
+                if (!context.avions.Any(e => e.id_avion == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/avion
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<avion>> Postavion(avion avion)
         {
-            _context.avions.Add(avion);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.avions.Add(avion);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (avionExists(avion.id_avion))
+                if (context.avions.Any(e => e.id_avion == avion.id_avion))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deleteavion(int id)
         {
-            var avion = await _context.avions.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var avion = await context.avions.FindAsync(id);
             if (avion == null)
             {
                 return NotFound();
             }
 
-            _context.avions.Remove(avion);
-            await _context.SaveChangesAsync();
+            context.avions.Remove(avion);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool avionExists(int id)
-        {
-            return _context.avions.Any(e => e.id_avion == id);
         }
     }
 }

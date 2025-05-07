@@ -1,14 +1,19 @@
 using api_db.Data;
 using Microsoft.EntityFrameworkCore;
-
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer(); // Necesario para APIs mínimas
 builder.Services.AddSwaggerGen(); // Swagger/OpenAPI
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseMySql(builder.Configuration.GetConnectionString("AppDbContext"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("AppDbContext"))));
+    options.UseMySql(builder.Configuration.GetConnectionString("Master"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("Master"))));
+
+// Services
+builder.Services.AddControllers();
+builder.Services.AddSingleton<IReadOnlyConnectionSelector, RoundRobinReadOnlyConnectionSelector>();
+builder.Services.AddSingleton<AppDbContextFactory>();
+
 
 var app = builder.Build();
 
@@ -20,29 +25,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast = Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

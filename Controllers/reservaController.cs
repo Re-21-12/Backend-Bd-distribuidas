@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class reservaController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public reservaController(AppDbContext context)
+        public reservaController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/reserva
         [HttpGet]
         public async Task<ActionResult<IEnumerable<reserva>>> Getreservas()
         {
-            return await _context.reservas.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.reservas.ToListAsync();
         }
 
         // GET: api/reserva/5
         [HttpGet("{id}")]
         public async Task<ActionResult<reserva>> Getreserva(uint id)
         {
-            var reserva = await _context.reservas.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var reserva = await context.reservas.FindAsync(id);
 
             if (reserva == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/reserva/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putreserva(uint id, reserva reserva)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(reserva).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(reserva).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!reservaExists(id))
+                if (!context.reservas.Any(e => e.id_reserva == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/reserva
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<reserva>> Postreserva(reserva reserva)
         {
-            _context.reservas.Add(reserva);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.reservas.Add(reserva);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (reservaExists(reserva.id_reserva))
+                if (context.reservas.Any(e => e.id_reserva == reserva.id_reserva))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletereserva(uint id)
         {
-            var reserva = await _context.reservas.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var reserva = await context.reservas.FindAsync(id);
             if (reserva == null)
             {
                 return NotFound();
             }
 
-            _context.reservas.Remove(reserva);
-            await _context.SaveChangesAsync();
+            context.reservas.Remove(reserva);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool reservaExists(uint id)
-        {
-            return _context.reservas.Any(e => e.id_reserva == id);
         }
     }
 }

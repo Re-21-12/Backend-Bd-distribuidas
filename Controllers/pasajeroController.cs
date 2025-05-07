@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class pasajeroController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public pasajeroController(AppDbContext context)
+        public pasajeroController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/pasajero
         [HttpGet]
         public async Task<ActionResult<IEnumerable<pasajero>>> Getpasajeros()
         {
-            return await _context.pasajeros.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.pasajeros.ToListAsync();
         }
 
         // GET: api/pasajero/5
         [HttpGet("{id}")]
         public async Task<ActionResult<pasajero>> Getpasajero(uint id)
         {
-            var pasajero = await _context.pasajeros.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var pasajero = await context.pasajeros.FindAsync(id);
 
             if (pasajero == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/pasajero/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putpasajero(uint id, pasajero pasajero)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(pasajero).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(pasajero).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!pasajeroExists(id))
+                if (!context.pasajeros.Any(e => e.id_pasajero == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/pasajero
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<pasajero>> Postpasajero(pasajero pasajero)
         {
-            _context.pasajeros.Add(pasajero);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.pasajeros.Add(pasajero);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (pasajeroExists(pasajero.id_pasajero))
+                if (context.pasajeros.Any(e => e.id_pasajero == pasajero.id_pasajero))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletepasajero(uint id)
         {
-            var pasajero = await _context.pasajeros.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var pasajero = await context.pasajeros.FindAsync(id);
             if (pasajero == null)
             {
                 return NotFound();
             }
 
-            _context.pasajeros.Remove(pasajero);
-            await _context.SaveChangesAsync();
+            context.pasajeros.Remove(pasajero);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool pasajeroExists(uint id)
-        {
-            return _context.pasajeros.Any(e => e.id_pasajero == id);
         }
     }
 }

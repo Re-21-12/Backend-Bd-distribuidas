@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using api_db.Data;
@@ -14,25 +13,27 @@ namespace api_db.Controllers
     [ApiController]
     public class ciudadController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public ciudadController(AppDbContext context)
+        public ciudadController(AppDbContextFactory dbContextFactory)
         {
-            _context = context;
+            _dbContextFactory = dbContextFactory;
         }
 
         // GET: api/ciudad
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ciudad>>> Getciudads()
         {
-            return await _context.ciudads.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.ciudads.ToListAsync();
         }
 
         // GET: api/ciudad/5
         [HttpGet("{id}")]
         public async Task<ActionResult<ciudad>> Getciudad(string id)
         {
-            var ciudad = await _context.ciudads.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var ciudad = await context.ciudads.FindAsync(id);
 
             if (ciudad == null)
             {
@@ -43,7 +44,6 @@ namespace api_db.Controllers
         }
 
         // PUT: api/ciudad/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> Putciudad(string id, ciudad ciudad)
         {
@@ -52,15 +52,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(ciudad).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(ciudad).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ciudadExists(id))
+                if (!context.ciudads.Any(e => e.codigo_ciudad == id))
                 {
                     return NotFound();
                 }
@@ -74,18 +75,19 @@ namespace api_db.Controllers
         }
 
         // POST: api/ciudad
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<ciudad>> Postciudad(ciudad ciudad)
         {
-            _context.ciudads.Add(ciudad);
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.ciudads.Add(ciudad);
+
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateException)
             {
-                if (ciudadExists(ciudad.codigo_ciudad))
+                if (context.ciudads.Any(e => e.codigo_ciudad == ciudad.codigo_ciudad))
                 {
                     return Conflict();
                 }
@@ -102,21 +104,17 @@ namespace api_db.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deleteciudad(string id)
         {
-            var ciudad = await _context.ciudads.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var ciudad = await context.ciudads.FindAsync(id);
             if (ciudad == null)
             {
                 return NotFound();
             }
 
-            _context.ciudads.Remove(ciudad);
-            await _context.SaveChangesAsync();
+            context.ciudads.Remove(ciudad);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool ciudadExists(string id)
-        {
-            return _context.ciudads.Any(e => e.codigo_ciudad == id);
         }
     }
 }

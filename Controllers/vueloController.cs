@@ -14,25 +14,25 @@ namespace api_db.Controllers
     [ApiController]
     public class vueloController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly AppDbContextFactory _dbContextFactory;
 
-        public vueloController(AppDbContext context)
+        public vueloController(AppDbContextFactory context)
         {
-            _context = context;
+            _dbContextFactory = context;
         }
 
-        // GET: api/vuelo
         [HttpGet]
         public async Task<ActionResult<IEnumerable<vuelo>>> Getvuelos()
         {
-            return await _context.vuelos.ToListAsync();
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            return await context.vuelos.ToListAsync();
         }
 
-        // GET: api/vuelo/5
         [HttpGet("{id}")]
         public async Task<ActionResult<vuelo>> Getvuelo(string id)
         {
-            var vuelo = await _context.vuelos.FindAsync(id);
+            using var context = _dbContextFactory.CreateReadOnlyContext();
+            var vuelo = await context.vuelos.FindAsync(id);
 
             if (vuelo == null)
             {
@@ -42,8 +42,7 @@ namespace api_db.Controllers
             return vuelo;
         }
 
-        // PUT: api/vuelo/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
+
         [HttpPut("{id}")]
         public async Task<IActionResult> Putvuelo(string id, vuelo vuelo)
         {
@@ -52,15 +51,16 @@ namespace api_db.Controllers
                 return BadRequest();
             }
 
-            _context.Entry(vuelo).State = EntityState.Modified;
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.Entry(vuelo).State = EntityState.Modified;
 
             try
             {
-                await _context.SaveChangesAsync();
+                await context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!vueloExists(id))
+                if (!context.vuelos.Any(e => e.numero_vuelo == id))
                 {
                     return NotFound();
                 }
@@ -72,51 +72,30 @@ namespace api_db.Controllers
 
             return NoContent();
         }
-
-        // POST: api/vuelo
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<vuelo>> Postvuelo(vuelo vuelo)
         {
-            _context.vuelos.Add(vuelo);
-            try
-            {
-                await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                if (vueloExists(vuelo.numero_vuelo))
-                {
-                    return Conflict();
-                }
-                else
-                {
-                    throw;
-                }
-            }
+            using var context = _dbContextFactory.CreateWriteContext();
+            context.vuelos.Add(vuelo);
+            await context.SaveChangesAsync();
 
-            return CreatedAtAction("Getvuelo", new { id = vuelo.numero_vuelo }, vuelo);
+            // Retorna 201 Created con la ruta del nuevo recurso creado
+            return CreatedAtAction(nameof(Getvuelo), new { id = vuelo.numero_vuelo }, vuelo);
         }
-
-        // DELETE: api/vuelo/5
         [HttpDelete("{id}")]
         public async Task<IActionResult> Deletevuelo(string id)
         {
-            var vuelo = await _context.vuelos.FindAsync(id);
+            using var context = _dbContextFactory.CreateWriteContext();
+            var vuelo = await context.vuelos.FindAsync(id);
             if (vuelo == null)
             {
                 return NotFound();
             }
 
-            _context.vuelos.Remove(vuelo);
-            await _context.SaveChangesAsync();
+            context.vuelos.Remove(vuelo);
+            await context.SaveChangesAsync();
 
             return NoContent();
-        }
-
-        private bool vueloExists(string id)
-        {
-            return _context.vuelos.Any(e => e.numero_vuelo == id);
         }
     }
 }
