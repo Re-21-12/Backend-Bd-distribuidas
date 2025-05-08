@@ -13,11 +13,5 @@ public partial class aeropuerto
 
     public string nombre { get; set; } = null!;
 
-    public virtual ciudad codigo_ciudadNavigation { get; set; } = null!;
 
-    public virtual pai codigo_paisNavigation { get; set; } = null!;
-
-    public virtual ICollection<vuelo> vueloaeropuerto_destinoNavigations { get; set; } = new List<vuelo>();
-
-    public virtual ICollection<vuelo> vueloaeropuerto_origenNavigations { get; set; } = new List<vuelo>();
 }

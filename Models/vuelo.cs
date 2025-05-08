@@ -17,11 +17,5 @@ public partial class vuelo
 
     public int id_avion { get; set; }
 
-    public virtual aeropuerto aeropuerto_destinoNavigation { get; set; } = null!;
 
-    public virtual aeropuerto aeropuerto_origenNavigation { get; set; } = null!;
-
-    public virtual avion id_avionNavigation { get; set; } = null!;
-
-    public virtual ICollection<reserva> reservas { get; set; } = new List<reserva>();
 }

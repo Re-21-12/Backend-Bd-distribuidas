@@ -9,5 +9,4 @@ public partial class aerolinea
 
     public string nombre { get; set; } = null!;
 
-    public virtual ICollection<avion> avions { get; set; } = new List<avion>();
 }

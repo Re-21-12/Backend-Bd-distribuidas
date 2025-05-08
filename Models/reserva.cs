@@ -17,9 +17,5 @@ public partial class reserva
 
     public string numero_vuelo { get; set; } = null!;
 
-    public virtual vuelo numero_vueloNavigation { get; set; } = null!;
 
-    public virtual plaza plaza { get; set; } = null!;
-
-    public virtual ICollection<pasajero> id_pasajeros { get; set; } = new List<pasajero>();
 }

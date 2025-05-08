@@ -9,5 +9,4 @@ public partial class plaza
 
     public int numero_plaza { get; set; }
 
-    public virtual ICollection<reserva> reservas { get; set; } = new List<reserva>();
 }

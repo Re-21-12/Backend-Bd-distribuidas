@@ -9,5 +9,4 @@ public partial class telefono
 
     public uint id_pasajero { get; set; }
 
-    public virtual pasajero id_pasajeroNavigation { get; set; } = null!;
 }

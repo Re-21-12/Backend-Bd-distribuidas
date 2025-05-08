@@ -32,8 +32,6 @@ public partial class AppDbContext : DbContext
 
     public virtual DbSet<telefono> telefonos { get; set; }
 
-    public virtual DbSet<test_rep> test_reps { get; set; }
-
     public virtual DbSet<vuelo> vuelos { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -69,15 +67,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.codigo_pais).HasMaxLength(3);
             entity.Property(e => e.nombre).HasMaxLength(255);
 
-            entity.HasOne(d => d.codigo_ciudadNavigation).WithMany(p => p.aeropuertos)
-                .HasForeignKey(d => d.codigo_ciudad)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("aeropuerto_ibfk_2");
 
-            entity.HasOne(d => d.codigo_paisNavigation).WithMany(p => p.aeropuertos)
-                .HasForeignKey(d => d.codigo_pais)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("aeropuerto_ibfk_1");
         });
 
         modelBuilder.Entity<avion>(entity =>
@@ -98,10 +88,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.matricula).HasMaxLength(20);
             entity.Property(e => e.modelo).HasMaxLength(100);
 
-            entity.HasOne(d => d.id_aerolineaNavigation).WithMany(p => p.avions)
-                .HasForeignKey(d => d.id_aerolinea)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("avion_ibfk_1");
         });
 
         modelBuilder.Entity<ciudad>(entity =>
@@ -116,10 +102,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.codigo_pais).HasMaxLength(3);
             entity.Property(e => e.nombre_ciudad).HasMaxLength(255);
 
-            entity.HasOne(d => d.codigo_paisNavigation).WithMany(p => p.ciudads)
-                .HasForeignKey(d => d.codigo_pais)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("ciudad_ibfk_1");
         });
 
         modelBuilder.Entity<correo_electronico>(entity =>
@@ -132,10 +114,7 @@ public partial class AppDbContext : DbContext
 
             entity.Property(e => e.id_pasajero).HasColumnType("int(10) unsigned");
 
-            entity.HasOne(d => d.id_pasajeroNavigation).WithMany(p => p.correo_electronicos)
-                .HasForeignKey(d => d.id_pasajero)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("correo_electronico_ibfk_1");
+
         });
 
         modelBuilder.Entity<pai>(entity =>
@@ -170,15 +149,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.segundo_nombre).HasMaxLength(255);
             entity.Property(e => e.tercer_nombre).HasMaxLength(255);
 
-            entity.HasOne(d => d.codigo_ciudadNavigation).WithMany(p => p.pasajeros)
-                .HasForeignKey(d => d.codigo_ciudad)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("pasajero_ibfk_2");
 
-            entity.HasOne(d => d.codigo_paisNavigation).WithMany(p => p.pasajeros)
-                .HasForeignKey(d => d.codigo_pais)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("pasajero_ibfk_1");
         });
 
         modelBuilder.Entity<plaza>(entity =>
@@ -213,37 +184,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.numero_plaza).HasColumnType("int(11)");
             entity.Property(e => e.numero_vuelo).HasMaxLength(10);
 
-            entity.HasOne(d => d.numero_vueloNavigation).WithMany(p => p.reservas)
-                .HasForeignKey(d => d.numero_vuelo)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("reserva_ibfk_2");
 
-            entity.HasOne(d => d.plaza).WithMany(p => p.reservas)
-                .HasForeignKey(d => new { d.letra_fila, d.numero_plaza })
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("reserva_ibfk_1");
-
-            entity.HasMany(d => d.id_pasajeros).WithMany(p => p.id_reservas)
-                .UsingEntity<Dictionary<string, object>>(
-                    "reserva_pasajero",
-                    r => r.HasOne<pasajero>().WithMany()
-                        .HasForeignKey("id_pasajero")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("reserva_pasajero_ibfk_2"),
-                    l => l.HasOne<reserva>().WithMany()
-                        .HasForeignKey("id_reserva")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("reserva_pasajero_ibfk_1"),
-                    j =>
-                    {
-                        j.HasKey("id_reserva", "id_pasajero")
-                            .HasName("PRIMARY")
-                            .HasAnnotation("MySql:IndexPrefixLength", new[] { 0, 0 });
-                        j.ToTable("reserva_pasajero");
-                        j.HasIndex(new[] { "id_pasajero" }, "id_pasajero");
-                        j.IndexerProperty<uint>("id_reserva").HasColumnType("int(10) unsigned");
-                        j.IndexerProperty<uint>("id_pasajero").HasColumnType("int(10) unsigned");
-                    });
         });
 
         modelBuilder.Entity<telefono>(entity =>
@@ -257,19 +198,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.numero_telefono).HasMaxLength(20);
             entity.Property(e => e.id_pasajero).HasColumnType("int(10) unsigned");
 
-            entity.HasOne(d => d.id_pasajeroNavigation).WithMany(p => p.telefonos)
-                .HasForeignKey(d => d.id_pasajero)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("telefono_ibfk_1");
-        });
 
-        modelBuilder.Entity<test_rep>(entity =>
-        {
-            entity
-                .HasNoKey()
-                .ToTable("test_rep");
-
-            entity.Property(e => e.id).HasColumnType("int(11)");
         });
 
         modelBuilder.Entity<vuelo>(entity =>
@@ -291,20 +220,7 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.hora_salida).HasColumnType("datetime");
             entity.Property(e => e.id_avion).HasColumnType("int(11)");
 
-            entity.HasOne(d => d.aeropuerto_destinoNavigation).WithMany(p => p.vueloaeropuerto_destinoNavigations)
-                .HasForeignKey(d => d.aeropuerto_destino)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("vuelo_ibfk_2");
 
-            entity.HasOne(d => d.aeropuerto_origenNavigation).WithMany(p => p.vueloaeropuerto_origenNavigations)
-                .HasForeignKey(d => d.aeropuerto_origen)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("vuelo_ibfk_1");
-
-            entity.HasOne(d => d.id_avionNavigation).WithMany(p => p.vuelos)
-                .HasForeignKey(d => d.id_avion)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("vuelo_ibfk_3");
         });
 
         OnModelCreatingPartial(modelBuilder);

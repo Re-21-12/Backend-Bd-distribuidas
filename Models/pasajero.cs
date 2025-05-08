@@ -23,13 +23,5 @@ public partial class pasajero
 
     public string codigo_ciudad { get; set; } = null!;
 
-    public virtual ciudad codigo_ciudadNavigation { get; set; } = null!;
 
-    public virtual pai codigo_paisNavigation { get; set; } = null!;
-
-    public virtual ICollection<correo_electronico> correo_electronicos { get; set; } = new List<correo_electronico>();
-
-    public virtual ICollection<telefono> telefonos { get; set; } = new List<telefono>();
-
-    public virtual ICollection<reserva> id_reservas { get; set; } = new List<reserva>();
 }

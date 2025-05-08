@@ -15,7 +15,5 @@ public partial class avion
 
     public string id_aerolinea { get; set; } = null!;
 
-    public virtual aerolinea id_aerolineaNavigation { get; set; } = null!;
 
-    public virtual ICollection<vuelo> vuelos { get; set; } = new List<vuelo>();
 }
